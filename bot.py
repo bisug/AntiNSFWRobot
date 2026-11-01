@@ -10,7 +10,7 @@ import datetime
 import logging
 
 from config import Config
-from kurigram import Client
+from kurigram import Client, enums
 
 # Get logging configurations
 logging.basicConfig(
@@ -34,6 +34,14 @@ class Bot(Client):
             api_hash=Config.API_HASH,
             bot_token=Config.BOT_TOKEN,
             plugins={"root": "modules"},
+            max_concurrent_transmissions=3,
+            max_topic_cache_size=1000,
+            max_message_cache_size=2000,
+            fetch_topics=True,
+            fetch_stories=True,
+            skip_updates=True,
+            sleep_threshold=30,
+            parse_mode=enums.ParseMode.HTML,
         )
 
     async def start(self):
@@ -43,6 +51,11 @@ class Bot(Client):
     async def stop(self):
         await super().stop()
         LOGGER.info("Stopped Services")
+
+
+@Client.on_error()
+async def on_update_error(client: Client, update, exception: Exception):
+    LOGGER.error("Error processing update: %s", exception, exc_info=exception)
 
 
 if __name__ == "__main__":
