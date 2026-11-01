@@ -25,7 +25,7 @@ async def NSFW(_: Client, message: t.Message):
     fileId = getFileId(message)
     if not fileId:
         return
-    file = await _.download_media(fileId)
+    file = await _.download_media(fileId, in_memory=True)
     if not file:
         return
     unsafe = await isNsfw(file)

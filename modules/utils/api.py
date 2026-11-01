@@ -1,6 +1,7 @@
 # Copyright 2024 Qewertyy, MIT License
 import asyncio
 import hashlib
+import io
 import logging
 import os
 
@@ -17,52 +18,61 @@ NSFW_THRESHOLD = float(os.getenv("NSFW_THRESHOLD", "0.6"))
 _classifier = NSFWClassifier(threshold=NSFW_THRESHOLD)
 
 
-def getFileHash(file: str) -> str:
-    hasher = hashlib.sha256()
-    with open(file, "rb") as f:
-        while chunk := f.read(4096):
-            hasher.update(chunk)
-    return hasher.hexdigest()
+def getMediaHash(media: str | bytes | io.BytesIO) -> tuple[str, bytes]:
+    """Compute sha256 hash and return (hash_string, raw_bytes)."""
+    if isinstance(media, bytes):
+        raw_bytes = media
+    elif isinstance(media, io.BytesIO):
+        raw_bytes = media.getvalue()
+    elif isinstance(media, str) and os.path.exists(media):
+        with open(media, "rb") as f:
+            raw_bytes = f.read()
+    else:
+        raise ValueError("Unsupported media type for hashing")
+    file_hash = hashlib.sha256(raw_bytes).hexdigest()
+    return file_hash, raw_bytes
 
 
-async def Check(file: str) -> bool | None:
-    """Classify an image locally using opennsfw-onnx on ONNX Runtime."""
+async def Check(media: bytes | io.BytesIO | str) -> bool | None:
+    """Classify an image locally in-memory using opennsfw-onnx on ONNX Runtime."""
     try:
-        prediction = await asyncio.to_thread(_classifier.classify, file)
+        prediction = await asyncio.to_thread(_classifier.classify, media)
         LOGGER.info(
-            "Classified %s: nsfw=%.4f, sfw=%.4f (is_nsfw=%s)",
-            os.path.basename(file),
+            "Classified media: nsfw=%.4f, sfw=%.4f (is_nsfw=%s)",
             prediction.nsfw,
             prediction.sfw,
             prediction.is_nsfw,
         )
         return prediction.is_nsfw
     except Exception as e:  # noqa: BLE001
-        LOGGER.error("Failed to classify image %s: %s", file, e)
+        LOGGER.error("Failed to classify image: %s", e)
         return None
 
 
-async def isNsfw(file: str) -> bool | None:
-    """Check if file is NSFW using cached database hash or local ONNX model."""
-    if not file or not os.path.exists(file):
+async def isNsfw(media: str | bytes | io.BytesIO) -> bool | None:
+    """Check if media is NSFW using in-memory hash cache or local ONNX model."""
+    if not media:
         return None
 
     try:
-        fileHash = getFileHash(file)
-        if isNSFW(fileHash) is True:
+        file_hash, raw_bytes = getMediaHash(media)
+        if isNSFW(file_hash) is True:
             return True
 
-        is_unsafe = await Check(file)
+        is_unsafe = await Check(raw_bytes)
         if is_unsafe is True:
-            await addNsfwFile(fileHash)
+            await addNsfwFile(file_hash)
             return True
         elif is_unsafe is False:
             return False
         return None
+    except Exception as e:  # noqa: BLE001
+        LOGGER.error("Error checking media NSFW status: %s", e)
+        return None
     finally:
-        if os.path.exists(file):
+        if isinstance(media, str) and os.path.exists(media):
             try:
-                os.remove(file)
+                os.remove(media)
             except OSError:
                 pass
 
