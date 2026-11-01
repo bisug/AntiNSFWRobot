@@ -1,11 +1,14 @@
-import os
 import traceback
+
 try:
-    from kurigram import Client, filters, types as t
+    from kurigram import Client, filters
+    from kurigram import types as t
 except ImportError:
-    from pyrogram import Client, filters, types as t
-from modules.utils.misc import getFileId
+    from pyrogram import Client, filters
+    from pyrogram import types as t
 from modules.utils.api import isNsfw
+from modules.utils.misc import getFileId
+
 
 @Client.on_message(
     (
@@ -31,6 +34,6 @@ async def NSFW(_: Client, message: t.Message):
     if unsafe is True:
         try:
             await message.delete()
-        except Exception:
+        except Exception:  # noqa: BLE001
             traceback.print_exc()
             return

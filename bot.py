@@ -2,16 +2,19 @@
 
 try:
     import uvloop
+
     uvloop.install()
 except (ImportError, AttributeError):
     pass
-import datetime, logging, sys
+import datetime
+import logging
+
 try:
     from kurigram import Client
 except ImportError:
     from pyrogram import Client
+
 from config import Config
-import httpx
 
 # Get logging configurations
 logging.basicConfig(
@@ -26,6 +29,7 @@ LOGGER = logging.getLogger(__name__)
 
 StartTime = datetime.datetime.now()
 
+
 class Bot(Client):
     def __init__(self):
         super().__init__(
@@ -33,8 +37,9 @@ class Bot(Client):
             api_id=Config.API_ID,
             api_hash=Config.API_HASH,
             bot_token=Config.BOT_TOKEN,
-            plugins=dict(root="modules"),
+            plugins={"root": "modules"},
         )
+
     async def start(self):
         await super().start()
         LOGGER.info("Bot Started")
@@ -42,6 +47,7 @@ class Bot(Client):
     async def stop(self):
         await super().stop()
         LOGGER.info("Stopped Services")
+
 
 if __name__ == "__main__":
     Bot().run()

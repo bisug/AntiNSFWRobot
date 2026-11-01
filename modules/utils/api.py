@@ -1,12 +1,15 @@
 # Copyright 2024 Qewertyy, MIT License
-from PIL import Image
-import asyncio, os, hashlib
+import contextlib
+import hashlib
+import os
+
+import httpx
 from lexica import AsyncClient
-from functools import wraps
-import httpx, re, traceback
-from urllib.parse import urlsplit
-from modules.database import isNSFW, addFileHash
+from PIL import Image
+
+from modules.database import addFileHash, isNSFW
 from modules.utils.misc import upload
+
 
 def getContentType(url):
     """Get Media Content Type"""
@@ -15,7 +18,7 @@ def getContentType(url):
             response = client.head(url)
             if response.status_code != 200:
                 return None
-            return response.headers.get('content-type', '').split("/")[0] or None
+            return response.headers.get("content-type", "").split("/")[0] or None
     except (TimeoutError, httpx.HTTPError):
         return None
 
@@ -30,14 +33,13 @@ async def Check(file):
         return output
     except (TimeoutError, httpx.HTTPError):
         return None
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         print("Failed:", e)
         return None
     finally:
-        try:
+        with contextlib.suppress(Exception):
             await client.close()
-        except Exception:
-            pass
+
 
 def convertToPNG(image):
     with Image.open(image) as im:
@@ -45,12 +47,14 @@ def convertToPNG(image):
             im = im.convert("RGBA" if "A" in im.mode else "RGB")
         im.save(image, "PNG")
 
+
 def getFileHash(file):
     hashs = hashlib.sha256()
     with open(file, "rb") as img:
         while chunk := img.read(4096):
             hashs.update(chunk)
     return hashs.hexdigest()
+
 
 async def isNsfw(file: str):
     """
@@ -69,17 +73,18 @@ async def isNsfw(file: str):
     else:
         for ext in [".jpg", ".jpeg", ".webp"]:
             if file.lower().endswith(ext):
-                convertToPNG(file) # cause telegraph acts weird sometimes.
+                convertToPNG(file)  # cause telegraph acts weird sometimes.
                 break
         result = await Check(file)
-        if result is None or result.get('code') != 2:
+        if result is None or result.get("code") != 2:
             return None
-        sfw = result.get('content', {}).get('sfw')
+        sfw = result.get("content", {}).get("sfw")
         if sfw is True:
             return False
         else:
             await addNsfwFile(fileHash)
             return True
+
 
 async def addNsfwFile(fileHash):
     return await addFileHash(fileHash)
