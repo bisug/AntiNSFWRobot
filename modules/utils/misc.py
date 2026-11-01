@@ -26,31 +26,39 @@ def getFileId(message):
 
     if message.animation:
         if not message.animation.thumbs:
-            return None, None
+            return None
         fileId = message.animation.thumbs[0].file_id
 
     if message.video:
         if not message.video.thumbs:
-            return None, None
+            return None
         fileId = message.video.thumbs[0].file_id
     return fileId
 
 async def upload(file: str):
+    res = None
     try:
-        files = {"file":open(file,'rb')}
+        with open(file, "rb") as f:
+            file_bytes = f.read()
+        files = {"file": (os.path.basename(file), file_bytes)}
         async with httpx.AsyncClient(http2=True) as client:
             res = await client.post(
                 "https://graph.org/upload",
                 files=files
-                )
+            )
         if res.status_code != 200:
             return None
         resp = res.json()
         if "error" in resp:
             return None
-        return 'https://graph.org'+resp[0]['src']
-    except Exception as E:
-        print("Uploading to telegraph failed:",res.text if res else traceback.print_exc())
+        return 'https://graph.org' + resp[0]['src']
+    except Exception as e:
+        error_msg = res.text if res is not None else str(e)
+        print("Uploading to telegraph failed:", error_msg)
         return None
     finally:
-        os.remove(file)
+        if os.path.exists(file):
+            try:
+                os.remove(file)
+            except OSError:
+                pass

@@ -1,70 +1,81 @@
 # Copyright 2024 Qewertyy, MIT License
 from PIL import Image
-import asyncio,base64,mimetypes,os,hashlib,base64
+import asyncio, os, hashlib
 from lexica import AsyncClient
 from functools import wraps
-import httpx,re,traceback
+import httpx, re, traceback
 from urllib.parse import urlsplit
-from modules.database import isNSFW,addFileHash
+from modules.database import isNSFW, addFileHash
 from modules.utils.misc import upload
 
 def getContentType(url):
     """Get Media Content Type"""
     try:
-        client = httpx.Client()
-        response = client.head(url)
-        if response.status_code != 200:
-            return None
-        return response.headers['content-type'].split("/")[0]
-    except (TimeoutError, httpx.ReadTimeout,httpx.ReadError,httpx.ConnectTimeout):
+        with httpx.Client() as client:
+            response = client.head(url)
+            if response.status_code != 200:
+                return None
+            return response.headers.get('content-type', '').split("/")[0] or None
+    except (TimeoutError, httpx.HTTPError):
         return None
 
 
 async def Check(file):
     img_url = await upload(file)
     if img_url is None:
-        return
+        return None
     client = AsyncClient()
     try:
         output = await client.AntiNsfw(img_url)
-        await client.close()
-    except (TimeoutError, httpx.ReadTimeout,httpx.ReadError,httpx.ConnectTimeout):
+        return output
+    except (TimeoutError, httpx.HTTPError):
         return None
     except Exception as e:
-        print("Failed:",e)
+        print("Failed:", e)
         return None
-    return output
+    finally:
+        try:
+            await client.close()
+        except Exception:
+            pass
 
 def convertToPNG(image):
-    im = Image.open(image)
-    im.save(image, "PNG")
+    with Image.open(image) as im:
+        if im.mode not in ("RGB", "RGBA"):
+            im = im.convert("RGBA" if "A" in im.mode else "RGB")
+        im.save(image, "PNG")
 
 def getFileHash(file):
     hashs = hashlib.sha256()
-    with open(file,"rb") as img:
+    with open(file, "rb") as img:
         while chunk := img.read(4096):
             hashs.update(chunk)
-        img.close()
-    fileHash = hashs.hexdigest()
-    return fileHash
+    return hashs.hexdigest()
 
 async def isNsfw(file: str):
     """
     Check if file is NSFW
     """
+    if not file or not os.path.exists(file):
+        return None
     fileHash = getFileHash(file)
     if isNSFW(fileHash) is True:
-        os.remove(file)
+        if os.path.exists(file):
+            try:
+                os.remove(file)
+            except OSError:
+                pass
         return True
     else:
-        for i in ["jpg","jpeg","webp"]:
-            if file.endswith(i):
+        for ext in [".jpg", ".jpeg", ".webp"]:
+            if file.lower().endswith(ext):
                 convertToPNG(file) # cause telegraph acts weird sometimes.
+                break
         result = await Check(file)
-        if result is None or result['code'] != 2:
-            return
-        sfw = result['content']['sfw']
-        if sfw == True:
+        if result is None or result.get('code') != 2:
+            return None
+        sfw = result.get('content', {}).get('sfw')
+        if sfw is True:
             return False
         else:
             await addNsfwFile(fileHash)

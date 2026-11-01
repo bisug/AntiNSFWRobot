@@ -1,6 +1,5 @@
 import os
 import traceback
-import datetime
 from pyrogram import Client, filters, types as t
 from modules.utils.misc import getFileId
 from modules.utils.api import isNsfw
@@ -23,6 +22,8 @@ async def NSFW(_: Client, message: t.Message):
     if not fileId:
         return
     file = await _.download_media(fileId)
+    if not file:
+        return
     unsafe = await isNsfw(file)
     if unsafe is True:
         try:
@@ -30,5 +31,3 @@ async def NSFW(_: Client, message: t.Message):
         except Exception:
             traceback.print_exc()
             return
-    else:
-        return

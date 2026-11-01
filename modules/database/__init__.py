@@ -1,16 +1,14 @@
 import logging
-from enum import Enum
-from typing import Optional
+from typing import Optional, Set
 
 from pony import orm
-from datetime import datetime
 
 from config import Config
 
 logger = logging.getLogger(__name__)
 db = orm.Database()
 
-FILE_HASHES = []
+FILE_HASHES: Set[str] = set()
 
 class FileHashes(db.Entity):
     __table__ = "hashes"
@@ -39,14 +37,15 @@ async def addFileHash(fileHash: str):
             try:
                 FileHashes(hash=fileHash)
                 db.commit()
-                __loadFileHashes()
+                FILE_HASHES.add(fileHash)
             except (orm.IntegrityError, orm.TransactionIntegrityError):
                 return
 
-def __loadFileHashes() -> list[str]:
+def __loadFileHashes() -> Set[str]:
     global FILE_HASHES
     with orm.db_session:
-        FILE_HASHES = list(orm.select(h.hash for h in FileHashes))
+        FILE_HASHES = set(orm.select(h.hash for h in FileHashes))
+    return FILE_HASHES
 
 def isNSFW(fileHash: str) -> Optional[bool]:
     return fileHash in FILE_HASHES
