@@ -1,8 +1,8 @@
-Pyrogram
-TgCrypto
-uvloop
-lexica-api
-httpx[http2]
-python-dotenv
-pony
-pillow
+Pyrogram==2.0.106
+TgCrypto==1.2.5
+uvloop>=0.23.0
+lexica-api>=1.6.0
+httpx[http2]>=0.28.1
+python-dotenv>=1.2.4
+pony>=0.7.20
+pillow>=13.0.0
