@@ -9,12 +9,8 @@ except (ImportError, AttributeError):
 import datetime
 import logging
 
-try:
-    from kurigram import Client
-except ImportError:
-    from pyrogram import Client
-
 from config import Config
+from kurigram import Client
 
 # Get logging configurations
 logging.basicConfig(
@@ -22,8 +18,8 @@ logging.basicConfig(
     handlers=[logging.FileHandler("logs.txt"), logging.StreamHandler()],
     level=logging.INFO,
 )
-logging.getLogger("pyrogram").setLevel(logging.WARNING)
 logging.getLogger("kurigram").setLevel(logging.WARNING)
+logging.getLogger("pyrogram").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 LOGGER = logging.getLogger(__name__)
 
