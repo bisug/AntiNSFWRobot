@@ -1,10 +1,19 @@
+SUPPORTED_DOCUMENT_MIMES = {
+    "image/png",
+    "image/jpeg",
+    "image/jpg",
+    "image/webp",
+    "image/bmp",
+}
+
+
 def getFileId(message):
     fileId = None
     if message.document:
         if int(message.document.file_size) > 5245728:
             return None
-        mimeType = message.document.mime_type
-        if mimeType not in ["image/png", "image/jpeg"]:
+        mimeType = (message.document.mime_type or "").lower()
+        if mimeType not in SUPPORTED_DOCUMENT_MIMES:
             return None
         fileId = message.document.file_id
     elif message.sticker:
