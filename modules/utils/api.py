@@ -18,6 +18,22 @@ NSFW_THRESHOLD = float(os.getenv("NSFW_THRESHOLD", "0.6"))
 _classifier = NSFWClassifier(threshold=NSFW_THRESHOLD)
 
 
+class Stats:
+    scanned: int = 0
+    nsfw_caught: int = 0
+    cache_hits: int = 0
+
+
+STATS = Stats()
+
+
+def setThreshold(val: float) -> float:
+    global NSFW_THRESHOLD, _classifier
+    NSFW_THRESHOLD = max(0.01, min(0.99, val))
+    _classifier = NSFWClassifier(threshold=NSFW_THRESHOLD)
+    return NSFW_THRESHOLD
+
+
 def getMediaHash(media: str | bytes | io.BytesIO) -> tuple[str, bytes]:
     """Compute sha256 hash and return (hash_string, raw_bytes)."""
     if isinstance(media, bytes):
@@ -55,12 +71,16 @@ async def isNsfw(media: str | bytes | io.BytesIO) -> bool | None:
         return None
 
     try:
+        STATS.scanned += 1
         file_hash, raw_bytes = getMediaHash(media)
         if isNSFW(file_hash) is True:
+            STATS.cache_hits += 1
+            STATS.nsfw_caught += 1
             return True
 
         is_unsafe = await Check(raw_bytes)
         if is_unsafe is True:
+            STATS.nsfw_caught += 1
             await addNsfwFile(file_hash)
             return True
         elif is_unsafe is False:
