@@ -4,7 +4,7 @@ from kurigram import Client, filters
 from kurigram import types as t
 
 startText = """
-An AntiNSFW bot Powered by @LexicaAPI to protect your groups from NSFW content.
+An AntiNSFW bot powered by OpenNSFW (ONNX Runtime) to protect your groups from NSFW content.
 """
 
 

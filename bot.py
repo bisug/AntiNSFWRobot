@@ -20,7 +20,7 @@ logging.basicConfig(
 )
 logging.getLogger("kurigram").setLevel(logging.WARNING)
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
-logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("onnxruntime").setLevel(logging.WARNING)
 LOGGER = logging.getLogger(__name__)
 
 StartTime = datetime.datetime.now()

@@ -30,6 +30,11 @@
             "description": "Get API_HASH from my.telegram.org",
             "required": true,
             "value": ""
+        },
+        "NSFW_THRESHOLD": {
+            "description": "Threshold for NSFW detection between 0.0 and 1.0 (default: 0.6)",
+            "required": false,
+            "value": "0.6"
         }
     }
 }
