@@ -1,7 +1,10 @@
 # Copyright 2024 Qewertyy, MIT License
 
-import uvloop
-uvloop.install()
+try:
+    import uvloop
+    uvloop.install()
+except (ImportError, AttributeError):
+    pass
 import datetime,logging, sys
 from pyrogram import Client
 from config import Config
