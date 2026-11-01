@@ -1,14 +1,3 @@
-import asyncio
-import os
-
-import httpx
-
-
-def _read_file(path: str) -> bytes:
-    with open(path, "rb") as f:
-        return f.read()
-
-
 def getFileId(message):
     fileId = None
     if message.document:
@@ -52,28 +41,3 @@ def getFileId(message):
         elif hasattr(first_item, "thumbs") and first_item.thumbs:
             fileId = first_item.thumbs[0].file_id
     return fileId
-
-
-async def upload(file: str):
-    res = None
-    try:
-        file_bytes = await asyncio.to_thread(_read_file, file)
-        files = {"file": (os.path.basename(file), file_bytes)}
-        async with httpx.AsyncClient(http2=True) as client:
-            res = await client.post("https://graph.org/upload", files=files)
-        if res.status_code != 200:
-            return None
-        resp = res.json()
-        if "error" in resp:
-            return None
-        return "https://graph.org" + resp[0]["src"]
-    except Exception as e:  # noqa: BLE001
-        error_msg = res.text if res is not None else str(e)
-        print("Uploading to telegraph failed:", error_msg)
-        return None
-    finally:
-        if os.path.exists(file):
-            try:
-                os.remove(file)
-            except OSError:
-                pass

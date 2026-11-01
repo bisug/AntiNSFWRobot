@@ -1,90 +1,71 @@
 # Copyright 2024 Qewertyy, MIT License
-import contextlib
+import asyncio
 import hashlib
+import logging
 import os
 
-import httpx
-from lexica import AsyncClient
-from PIL import Image
+from opennsfw_onnx import NSFWClassifier
 
 from modules.database import addFileHash, isNSFW
-from modules.utils.misc import upload
+
+LOGGER = logging.getLogger(__name__)
+
+# Configurable NSFW threshold (default: 0.6)
+NSFW_THRESHOLD = float(os.getenv("NSFW_THRESHOLD", "0.6"))
+
+# Initialize local ONNX classifier session
+_classifier = NSFWClassifier(threshold=NSFW_THRESHOLD)
 
 
-def getContentType(url):
-    """Get Media Content Type"""
+def getFileHash(file: str) -> str:
+    hasher = hashlib.sha256()
+    with open(file, "rb") as f:
+        while chunk := f.read(4096):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+
+async def Check(file: str) -> bool | None:
+    """Classify an image locally using opennsfw-onnx on ONNX Runtime."""
     try:
-        with httpx.Client() as client:
-            response = client.head(url)
-            if response.status_code != 200:
-                return None
-            return response.headers.get("content-type", "").split("/")[0] or None
-    except (TimeoutError, httpx.HTTPError):
-        return None
-
-
-async def Check(file):
-    img_url = await upload(file)
-    if img_url is None:
-        return None
-    client = AsyncClient()
-    try:
-        output = await client.AntiNsfw(img_url)
-        return output
-    except (TimeoutError, httpx.HTTPError):
-        return None
+        prediction = await asyncio.to_thread(_classifier.classify, file)
+        LOGGER.info(
+            "Classified %s: nsfw=%.4f, sfw=%.4f (is_nsfw=%s)",
+            os.path.basename(file),
+            prediction.nsfw,
+            prediction.sfw,
+            prediction.is_nsfw,
+        )
+        return prediction.is_nsfw
     except Exception as e:  # noqa: BLE001
-        print("Failed:", e)
+        LOGGER.error("Failed to classify image %s: %s", file, e)
         return None
-    finally:
-        with contextlib.suppress(Exception):
-            await client.close()
 
 
-def convertToPNG(image):
-    with Image.open(image) as im:
-        if im.mode not in ("RGB", "RGBA"):
-            im = im.convert("RGBA" if "A" in im.mode else "RGB")
-        im.save(image, "PNG")
-
-
-def getFileHash(file):
-    hashs = hashlib.sha256()
-    with open(file, "rb") as img:
-        while chunk := img.read(4096):
-            hashs.update(chunk)
-    return hashs.hexdigest()
-
-
-async def isNsfw(file: str):
-    """
-    Check if file is NSFW
-    """
+async def isNsfw(file: str) -> bool | None:
+    """Check if file is NSFW using cached database hash or local ONNX model."""
     if not file or not os.path.exists(file):
         return None
-    fileHash = getFileHash(file)
-    if isNSFW(fileHash) is True:
+
+    try:
+        fileHash = getFileHash(file)
+        if isNSFW(fileHash) is True:
+            return True
+
+        is_unsafe = await Check(file)
+        if is_unsafe is True:
+            await addNsfwFile(fileHash)
+            return True
+        elif is_unsafe is False:
+            return False
+        return None
+    finally:
         if os.path.exists(file):
             try:
                 os.remove(file)
             except OSError:
                 pass
-        return True
-    else:
-        for ext in [".jpg", ".jpeg", ".webp"]:
-            if file.lower().endswith(ext):
-                convertToPNG(file)  # cause telegraph acts weird sometimes.
-                break
-        result = await Check(file)
-        if result is None or result.get("code") != 2:
-            return None
-        sfw = result.get("content", {}).get("sfw")
-        if sfw is True:
-            return False
-        else:
-            await addNsfwFile(fileHash)
-            return True
 
 
-async def addNsfwFile(fileHash):
+async def addNsfwFile(fileHash: str):
     return await addFileHash(fileHash)
