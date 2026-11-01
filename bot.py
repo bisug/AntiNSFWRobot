@@ -5,8 +5,11 @@ try:
     uvloop.install()
 except (ImportError, AttributeError):
     pass
-import datetime,logging, sys
-from pyrogram import Client
+import datetime, logging, sys
+try:
+    from kurigram import Client
+except ImportError:
+    from pyrogram import Client
 from config import Config
 import httpx
 
@@ -17,6 +20,7 @@ logging.basicConfig(
     level=logging.INFO,
 )
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
+logging.getLogger("kurigram").setLevel(logging.WARNING)
 logging.getLogger("httpx").setLevel(logging.WARNING)
 LOGGER = logging.getLogger(__name__)
 

@@ -1,6 +1,9 @@
 import os
 import traceback
-from pyrogram import Client, filters, types as t
+try:
+    from kurigram import Client, filters, types as t
+except ImportError:
+    from pyrogram import Client, filters, types as t
 from modules.utils.misc import getFileId
 from modules.utils.api import isNsfw
 

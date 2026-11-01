@@ -1,6 +1,9 @@
 # Copyright 2024 Qewertyy, MIT License
 
-from pyrogram import Client, filters, types as t
+try:
+    from kurigram import Client, filters, types as t
+except ImportError:
+    from pyrogram import Client, filters, types as t
 from bot import StartTime
 
 startText = """
