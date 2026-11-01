@@ -5,6 +5,11 @@ from kurigram import types as t
 
 startText = """
 An AntiNSFW bot powered by OpenNSFW (ONNX Runtime) to protect your groups from NSFW content.
+
+<b>Commands:</b>
+• /start, /help - Show this message
+• /stats - View scanning statistics and bot uptime
+• /threshold - View or update NSFW sensitivity (admins only)
 """
 
 
