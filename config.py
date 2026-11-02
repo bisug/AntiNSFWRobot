@@ -28,3 +28,17 @@ class Config:
         DB_USER = DB_USER or _parsed.username
         DB_PASSWORD = DB_PASSWORD or _parsed.password
         DB_NAME = DB_NAME or (_parsed.path.lstrip("/") if _parsed.path else None)
+
+    @classmethod
+    def validate(cls):
+        missing = []
+        if not cls.BOT_TOKEN:
+            missing.append("BOT_TOKEN")
+        if not cls.API_ID:
+            missing.append("API_ID")
+        if not cls.API_HASH:
+            missing.append("API_HASH")
+        if missing:
+            raise ValueError(
+                f"Missing required environment variable(s): {', '.join(missing)}"
+            )
