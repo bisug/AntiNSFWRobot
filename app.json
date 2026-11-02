@@ -35,6 +35,11 @@
             "description": "Threshold for NSFW detection between 0.0 and 1.0 (default: 0.6)",
             "required": false,
             "value": "0.6"
+        },
+        "DATABASE_URL": {
+            "description": "PostgreSQL connection string. If omitted, embedded SQLite is used.",
+            "required": false,
+            "value": ""
         }
     }
 }
