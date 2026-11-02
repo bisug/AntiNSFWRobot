@@ -49,6 +49,12 @@ class Bot(Client):
         LOGGER.info("Bot Started")
 
     async def stop(self):
+        try:
+            from modules.database import close_db
+
+            close_db()
+        except Exception as e:
+            LOGGER.error("Failed to cleanly disconnect DB: %s", e)
         await super().stop()
         LOGGER.info("Stopped Services")
 

@@ -18,6 +18,8 @@ class Config:
     DB_PASSWORD = os.getenv("DB_PASSWORD")
     DB_NAME = os.getenv("DB_NAME")
     DB_SSLMODE = os.getenv("DB_SSLMODE", "prefer")
+    DB_MIN_CONNECTIONS = int(os.getenv("DB_MIN_CONNECTIONS", "1"))
+    DB_MAX_CONNECTIONS = int(os.getenv("DB_MAX_CONNECTIONS", "10"))
 
     if DATABASE_URL:
         _parsed = urlparse(DATABASE_URL)
