@@ -5,3 +5,4 @@ opennsfw-onnx>=0.1.0
 python-dotenv>=1.2.4
 pony>=0.7.20
 pillow>=13.0.0
+psycopg2-binary>=2.9.9

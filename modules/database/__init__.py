@@ -15,19 +15,23 @@ class FileHashes(db.Entity):
     hash = orm.PrimaryKey(str)
 
 
-if not any((Config.DB_HOST, Config.DB_USER, Config.DB_PASSWORD, Config.DB_NAME)):
+if not (Config.DB_HOST and Config.DB_USER and Config.DB_NAME):
     logger.warning("External Database not configured. Using SQLite instead.")
     db.bind(provider="sqlite", filename="data.db", create_db=True)
 
 else:
-    db.bind(
-        provider="postgres",
-        host=Config.DB_HOST,
-        user=Config.DB_USER,
-        password=Config.DB_PASSWORD,
-        database=Config.DB_NAME,
-        sslmode="require",
-    )
+    bind_kwargs = {
+        "provider": "postgres",
+        "host": Config.DB_HOST,
+        "port": Config.DB_PORT,
+        "user": Config.DB_USER,
+        "password": Config.DB_PASSWORD or "",
+        "database": Config.DB_NAME,
+    }
+    if Config.DB_SSLMODE:
+        bind_kwargs["sslmode"] = Config.DB_SSLMODE
+
+    db.bind(**bind_kwargs)
     logger.info("Postgres Database configured.")
 
 db.generate_mapping(create_tables=True)
