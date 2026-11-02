@@ -1,12 +1,7 @@
 # Copyright 2024 Qewertyy, MIT License
 
-try:
-    import uvloop
-
-    uvloop.install()
-except (ImportError, AttributeError):
-    pass
 import asyncio
+import contextlib
 import datetime
 import logging
 import signal
@@ -25,6 +20,26 @@ logging.getLogger("kurigram").setLevel(logging.WARNING)
 logging.getLogger("pyrogram").setLevel(logging.WARNING)
 logging.getLogger("onnxruntime").setLevel(logging.WARNING)
 LOGGER = logging.getLogger(__name__)
+
+
+def _init_event_loop() -> None:
+    """Attempt to install uvloop with graceful fallback to standard asyncio."""
+    try:
+        import uvloop
+
+        uvloop.install()
+        LOGGER.info("uvloop event loop policy successfully installed.")
+    except (ImportError, AttributeError, NotImplementedError) as exc:
+        LOGGER.warning(
+            "uvloop unavailable (%s). Falling back to standard asyncio loop.",
+            exc,
+        )
+        if sys.platform == "win32":
+            with contextlib.suppress(Exception):
+                asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+
+_init_event_loop()
 
 StartTime = datetime.datetime.now()
 
@@ -108,6 +123,7 @@ async def main():
     bot = Bot()
     stop_event = asyncio.Event()
     loop = asyncio.get_running_loop()
+    LOGGER.info("Active event loop: %s", type(loop).__name__)
 
     for sig in (signal.SIGINT, signal.SIGTERM):
         try:
