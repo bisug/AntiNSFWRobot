@@ -9,6 +9,8 @@ from modules.utils.misc import getFileId
 
 LOGGER = logging.getLogger(__name__)
 
+_BG_TASKS: set[asyncio.Task] = set()
+
 MEDIA_FILTER = (
     filters.document
     | filters.photo
@@ -75,6 +77,8 @@ async def NSFW(_: Client, message: t.Message):
                 f"⚠️ <b>Removed NSFW content from {mention}.</b>",
                 quote=False,
             )
-            asyncio.create_task(_delete_later(notice, delay=10))
+            task = asyncio.create_task(_delete_later(notice, delay=10))
+            _BG_TASKS.add(task)
+            task.add_done_callback(_BG_TASKS.discard)
         except Exception as e:  # noqa: BLE001
             LOGGER.error("Failed to delete NSFW message: %s", e)

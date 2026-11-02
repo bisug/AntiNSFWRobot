@@ -50,15 +50,17 @@ else:
 db.generate_mapping(create_tables=True)
 
 
+_write_lock = asyncio.Lock()
+
+
 def _sync_add_hash(file_hash: str) -> None:
     """Synchronous worker function to commit a new hash to database."""
-    with orm.db_session:
-        if not FileHashes.exists(hash=file_hash):
-            try:
+    try:
+        with orm.db_session:
+            if not FileHashes.exists(hash=file_hash):
                 FileHashes(hash=file_hash)
-                db.commit()
-            except (orm.IntegrityError, orm.TransactionIntegrityError):
-                pass
+    except (orm.IntegrityError, orm.TransactionIntegrityError):
+        pass
 
 
 async def addFileHash(fileHash: str) -> None:
@@ -66,10 +68,11 @@ async def addFileHash(fileHash: str) -> None:
     if not fileHash or fileHash in FILE_HASHES:
         return
     FILE_HASHES.add(fileHash)
-    try:
-        await asyncio.to_thread(_sync_add_hash, fileHash)
-    except Exception as e:
-        logger.error("Failed to persist hash %s to database: %s", fileHash, e)
+    async with _write_lock:
+        try:
+            await asyncio.to_thread(_sync_add_hash, fileHash)
+        except Exception as e:
+            logger.error("Failed to persist hash %s to database: %s", fileHash, e)
 
 
 def __loadFileHashes() -> set[str]:

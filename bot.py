@@ -71,15 +71,13 @@ class Bot(Client):
         self._is_stopping = True
         LOGGER.info("Initiating graceful shutdown...")
 
-        # 1. Drain pending background tasks with timeout
-        tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
-        if tasks:
-            LOGGER.info("Waiting for %d pending background tasks...", len(tasks))
-            done, pending = await asyncio.wait(tasks, timeout=5.0)
-            for t in pending:
-                t.cancel()
+        # 1. Stop client session first (shuts down network listeners & MTProto tasks cleanly)
+        try:
+            await super().stop()
+        except Exception as e:
+            LOGGER.error("Error stopping Telegram client: %s", e)
 
-        # 2. Disconnect database pool
+        # 2. Disconnect database pool after all message processing has ceased
         try:
             from modules.database import close_db
 
@@ -87,8 +85,11 @@ class Bot(Client):
         except Exception as e:
             LOGGER.error("Failed to cleanly disconnect DB: %s", e)
 
-        # 3. Stop client session
-        await super().stop()
+        # 3. Cancel any lingering background tasks
+        tasks = [t for t in asyncio.all_tasks() if t is not asyncio.current_task()]
+        for t in tasks:
+            t.cancel()
+
         LOGGER.info("All services stopped cleanly.")
 
 
