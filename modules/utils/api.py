@@ -81,7 +81,7 @@ async def isNsfw(media: str | bytes | io.BytesIO) -> bool | None:
         is_unsafe = await Check(raw_bytes)
         if is_unsafe is True:
             STATS.nsfw_caught += 1
-            await addNsfwFile(file_hash)
+            await addFileHash(file_hash)
             return True
         elif is_unsafe is False:
             return False
@@ -96,6 +96,3 @@ async def isNsfw(media: str | bytes | io.BytesIO) -> bool | None:
             except OSError:
                 pass
 
-
-async def addNsfwFile(fileHash: str):
-    return await addFileHash(fileHash)

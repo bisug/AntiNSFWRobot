@@ -1,4 +1,3 @@
-import contextlib
 import datetime
 
 from bot import StartTime
@@ -6,6 +5,7 @@ from kurigram import Client, enums, filters
 from kurigram import types as t
 from modules.database import FILE_HASHES
 from modules.utils.api import NSFW_THRESHOLD, STATS, setThreshold
+from modules.utils.misc import is_admin
 
 
 def get_readable_time(seconds: int) -> str:
@@ -63,16 +63,11 @@ async def threshold_command(_: Client, m: t.Message):
 
     # Check if command sender is group admin in group chats
     if m.chat.type != enums.ChatType.PRIVATE and m.from_user:
-        with contextlib.suppress(Exception):
-            member = await m.chat.get_chat_member(m.from_user.id)
-            if member.status not in (
-                enums.ChatMemberStatus.OWNER,
-                enums.ChatMemberStatus.ADMINISTRATOR,
-            ):
-                await m.reply_text(
-                    "❌ <b>Only group administrators can adjust the threshold.</b>"
-                )
-                return
+        if not await is_admin(_, m.chat.id, m.from_user.id):
+            await m.reply_text(
+                "❌ <b>Only group administrators can adjust the threshold.</b>"
+            )
+            return
 
     try:
         new_val = float(m.command[1])

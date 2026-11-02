@@ -1,3 +1,5 @@
+from kurigram import Client, enums
+
 SUPPORTED_DOCUMENT_MIMES = {
     "image/png",
     "image/jpeg",
@@ -5,6 +7,18 @@ SUPPORTED_DOCUMENT_MIMES = {
     "image/webp",
     "image/bmp",
 }
+
+
+async def is_admin(client: Client, chat_id: int, user_id: int) -> bool:
+    """Check if the user is a chat owner or administrator."""
+    try:
+        member = await client.get_chat_member(chat_id, user_id)
+        return member.status in (
+            enums.ChatMemberStatus.OWNER,
+            enums.ChatMemberStatus.ADMINISTRATOR,
+        )
+    except Exception:  # noqa: BLE001
+        return False
 
 
 def getFileId(message):

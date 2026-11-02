@@ -5,7 +5,7 @@ import logging
 from kurigram import Client, enums, filters
 from kurigram import types as t
 from modules.utils.api import isNsfw
-from modules.utils.misc import getFileId
+from modules.utils.misc import getFileId, is_admin
 
 LOGGER = logging.getLogger(__name__)
 
@@ -22,17 +22,6 @@ MEDIA_FILTER = (
     | filters.paid_message
 ) & ~filters.private
 
-
-async def is_admin(client: Client, chat_id: int, user_id: int) -> bool:
-    """Check if the user is a chat owner or administrator."""
-    try:
-        member = await client.get_chat_member(chat_id, user_id)
-        return member.status in (
-            enums.ChatMemberStatus.OWNER,
-            enums.ChatMemberStatus.ADMINISTRATOR,
-        )
-    except Exception:  # noqa: BLE001
-        return False
 
 
 async def _delete_later(message: t.Message, delay: int = 10):
